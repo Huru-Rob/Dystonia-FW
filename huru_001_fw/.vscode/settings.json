@@ -1,0 +1,17 @@
+{
+    "C_Cpp.errorSquiggles": "Disabled",
+    "files.associations": {
+        "board_config.h": "c",
+        "nrf_bootloader_info.h": "c",
+        "nrf_fstorage_nvmc.h": "c",
+        "nordic_common.h": "c",
+        "esb.h": "c",
+        "nrf_esb.h": "c",
+        "nrf.h": "c"
+    },
+    "cSpell.words": [
+    ],
+    "cortex-debug.variableUseNaturalFormat": true,
+    "terminal.integrated.scrollback": 5000,
+    "makefile.makePath": "mingw32-make"
+}

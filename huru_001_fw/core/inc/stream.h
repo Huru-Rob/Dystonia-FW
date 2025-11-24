@@ -1,0 +1,27 @@
+#ifndef STREAM_H_INCLUDED
+#define STREAM_H_INCLUDED
+
+#include "AFE4960.h"
+#include "acc.h"
+
+#define MAX_PAYLOAD (243)
+#define EEG_DEBUG_SAMPLES_PER_MTU ((MAX_PAYLOAD-12) / 3)
+//#define ACC_DEBUG_SAMPLES_PER_MTU ((MAX_PAYLOAD-12) / 6)
+#define ACC_DEBUG_SAMPLES_PER_MTU (10)
+//#define MAG_DEBUG_SAMPLES_PER_MTU ((MAX_PAYLOAD-12) / 6)
+#define MAG_DEBUG_SAMPLES_PER_MTU (2)
+#define IMP_DEBUG_SAMPLES_PER_MTU (2)
+#define ACC_DEBUG_QUEUE_SIZE (ACC_FIFO_SIZE + ACC_DEBUG_SAMPLES_PER_MTU)
+#define EEG_DEBUG_QUEUE_SIZE (AFE_FIFO_SIZE + EEG_DEBUG_SAMPLES_PER_MTU)
+#define MAG_DEBUG_QUEUE_SIZE (MAG_FIFO_SIZE + MAG_DEBUG_SAMPLES_PER_MTU)
+#define IMP_DEBUG_QUEUE_SIZE (IMP_DEBUG_SAMPLES_PER_MTU)
+
+#define IMP_DEBUG_SAMPLE_RATE (10)
+#define IMPEDANCE_STREAMING_PERIOD_MS (100)
+
+int32_t streaming_update(void);
+int32_t streaming_init(void);
+int32_t streaming_start(void);
+int32_t streaming_stop(void);
+
+#endif

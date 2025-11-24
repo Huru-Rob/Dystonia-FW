@@ -1,0 +1,32 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:\\Users\\rob\\NRF52\\DeviceDownload\\nRF5_SDK_17.1.0_ddde560\\nRF5_SDK_17.1.0_ddde560\\modules\\**",
+                "C:\\Users\\rob\\NRF52\\DeviceDownload\\nRF5_SDK_17.1.0_ddde560\\nRF5_SDK_17.1.0_ddde560\\components\\**"
+                    // "C:\\Users\\rob\\NRF52\\DeviceDownload\\nRF5_SDK_17.1.0_ddde560\\nRF5_SDK_17.1.0_ddde560**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-arm",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}\\**",
+                    "C:\\Users\\rob\\NRF52\\DeviceDownload\\nRF5_SDK_17.1.0_ddde560\\nRF5_SDK_17.1.0_ddde560\\"
+                ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ""
+            },
+            "compilerPath": "C:\\Program Files (x86)\\GNU Arm Embedded Toolchain\\10 2021.10\\bin\\arm-none-eabi-gcc.exe",
+            "configurationProvider": "ms-vscode.makefile-tools"
+        }
+    ],
+    "version": 4
+}

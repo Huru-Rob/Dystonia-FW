@@ -1,0 +1,57 @@
+{
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "mingw32-make",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Build the Default Configuration"
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "mingw32-make clean",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []            
+        },
+        {
+            "label": "flash_all",
+            "type": "shell",
+            "command": "mingw32-make flash_all",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []            
+        },
+        {
+            "label": "flash_softdevice",
+            "type": "shell",
+            "command": "mingw32-make flash_softdevice",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []            
+        },
+        {
+            "label": "erase",
+            "type": "shell",
+            "command": "mingw32-make erase",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []            
+        }
+    ],
+    "version": "2.0.0"
+}
