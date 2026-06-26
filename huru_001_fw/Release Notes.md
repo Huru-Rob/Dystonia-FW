@@ -1,5 +1,13 @@
 # Release Notes
 
+## 2.2
+- New Device ID in UICR supported
+- Rev E board support added.
+
+## 2.1
+- Neurobuzz algorithm support added.
+- Various changes to esb state machine to fix small issues and attempt to fix missing VTS stimulus events.
+
 ## 1.18
 - HURU Protocol Version 0x0103 now supported, but not turned on yet to maintain compatibility with the current build of the app
     - Temperature now recorded once per epoch

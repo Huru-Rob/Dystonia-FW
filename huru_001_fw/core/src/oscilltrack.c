@@ -44,6 +44,7 @@ float m_eeg_vertical_scale = 0.0;
 bool m_stimulusOn = true;
 bool m_50HzFilterOn = true;
 uint8_t m_decimation_count = OSCILLTRACK_DECIMATION_FACTOR;
+bool m_stimulus_blank = false;
 
 // bool oscilltrack_timeout = false;
 // void oscilltrack_timer_handler(void *p_context)
@@ -56,6 +57,7 @@ void oscilltrack_set_frequency(int32_t frequency_hz)
 {
     m_fc = (float)frequency_hz;
     m_w = TWO_PI * m_fc / OSCILLTRACK_FS;
+    m_suppressionReset = (uint8_t)((float)OSCILLTRACK_FS / m_fc * (float)m_suppressionDutyCycle);
 }
 
 void oscilltrack_set_trigger_phase(int32_t trigger_phase_degrees)
@@ -239,6 +241,11 @@ float oscilltrack_line_filter(float input)
     return output;
 }
 
+void oscilltrack_blank_stimulus(bool blank)
+{
+    m_stimulus_blank = blank;
+}
+
 int32_t oscilltrack_update(void)
 {
     int32_t err = 0;
@@ -251,7 +258,6 @@ int32_t oscilltrack_update(void)
         m_eeg_vertical_scale = afe_get_eeg_vertical_scaling();
 
         float eeg_sample = (float)oscilltrack_eeg_rx_buf[0] * m_eeg_vertical_scale * 1.0e6f;        
-        hal_gpio_set(PIN_RTC_EVI);
         osc_state.filtered = oscilltrackHighPass(eeg_sample);
         if(m_50HzFilterOn)
         {
@@ -260,11 +266,11 @@ int32_t oscilltrack_update(void)
         oscilltrackTrk(osc_state.filtered);
         osc_state.ph = atan2f(osc_state.im, osc_state.re);
         bool pulse = oscilltrackPhasePulse(osc_state.ph);
-        if(pulse)
+        if(pulse && m_stimulus_blank == false)
         {
             esb_set_stimulus();
         }
-        hal_gpio_clear(PIN_RTC_EVI);
+        
 
         if(m_decimation_count > 0)
         {
@@ -275,7 +281,7 @@ int32_t oscilltrack_update(void)
                 osc_state.packet_id += 1;
                 m_decimation_count = OSCILLTRACK_DECIMATION_FACTOR;
             }
-        }        
+        }
         
     }
 
@@ -291,3 +297,4 @@ int32_t oscilltrack_update(void)
     
     return err;
 }
+

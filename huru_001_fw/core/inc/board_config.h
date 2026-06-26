@@ -4,9 +4,11 @@
 #include "nrf_gpio.h"
 #include "pt10.h"
 
-#define FIRMWARE_VERSION_TXT "V0.1.5"
-#define FIRMWARE_VERSION ((0 << 16) | (1 << 8) | (5 << 0))
-#define HARDWARE_VERSION 0x01
+#define FIRMWARE_VERSION_MAJOR      (0)
+#define FIRMWARE_VERSION_MINOR      (2)
+#define FIRMWARE_VERSION_SUB        (2)
+
+#define FIRMWARE_VERSION ((FIRMWARE_VERSION_MAJOR << 16) | (FIRMWARE_VERSION_MINOR << 8) | (FIRMWARE_VERSION_SUB << 0))
 
 #define PT10A //PT10A hardware
 #define ADVERTISING_NAME_PT10A
@@ -75,6 +77,7 @@
     #define PIN_LNA_3V0         NRF_GPIO_PIN_MAP(1,10)
     #define PIN_VBAT_ADC        NRF_GPIO_PIN_MAP(0,4)
     #define PIN_VBAT_ADC_EN     NRF_GPIO_PIN_MAP(0,14)
+    #define PIN_FLASH_ON        NRF_GPIO_PIN_MAP(1,1)
 
     #define PIN_RESET           NRF_GPIO_PIN_MAP(0,18)
 

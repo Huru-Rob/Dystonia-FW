@@ -1,6 +1,8 @@
 #ifndef INTERNAL_FLASH_H_INCLUDED
 #define INTERNAL_FLASH_H_INCLUDED
 
+#include "neurobuzz.h"
+
 typedef enum {
     store_reason_none = 0,
     store_reason_blank_device_id = 1,
@@ -23,6 +25,13 @@ typedef struct {
     int32_t suppression_duty_cycle;
     int32_t convergence_gain;
     uint32_t flags;
+    int16_t phases[NEUROBUZZ_MAX_PHASES];
+    uint8_t num_phases;    
+    uint32_t long_dur;
+    uint32_t short_dur;
+    uint32_t switch_stim_gap;
+    int16_t step_near_preferred_phase;
+    uint8_t disable_refinement;
 } nv_params_t;
 
 //internal flash
@@ -30,9 +39,6 @@ int32_t init_internal_flash(void);
 
 int32_t save_info_to_local_flash(uint32_t store_reason);
 int32_t read_stored_data(void);
-
-int32_t set_device_id(uint32_t device_id);
-int32_t get_device_id(uint32_t * device_id);
 
 int32_t set_deep_sleep_flag(uint32_t deep_sleep_flag);
 int32_t get_deep_sleep_flag(uint32_t *deep_sleep_flag);
@@ -47,6 +53,20 @@ int32_t set_oscilltrack_convergence_gain(int32_t convergence_gain);
 int32_t get_oscilltrack_convergence_gain(int32_t *convergence_gain);
 int32_t get_oscilltrack_flags(uint32_t *flags);
 int32_t set_oscilltrack_flags(uint32_t flags);
+int32_t set_neurobuzz_phases(int16_t *phases, uint8_t num_phases);
+int32_t get_neurobuzz_phases(int16_t *phases, uint8_t *num_phases);
+int32_t get_neurobuzz_long_dur(uint32_t *long_dur);
+int32_t set_neurobuzz_long_dur(uint32_t long_dur);
+int32_t get_neurobuzz_short_dur(uint32_t *short_dur);
+int32_t set_neurobuzz_short_dur(uint32_t short_dur);
+int32_t get_neurobuzz_switch_stim_gap(uint32_t *switch_stim_gap);
+int32_t set_neurobuzz_switch_stim_gap(uint32_t switch_stim_gap);
+int32_t get_neurobuzz_step_near_preferred_phase(int16_t *step);
+int32_t set_neurobuzz_step_near_preferred_phase(int16_t step);
+int32_t set_neurobuzz_disable_refinement(bool disabled);
+int32_t get_neurobuzz_disable_refinement(uint8_t *disabled);
+int32_t set_neurobuzz_first_default_phase(int16_t phase);
+int32_t set_neurobuzz_next_default_phase(int16_t phase);
 
 uint32_t get_store_reason(void);
 

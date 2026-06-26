@@ -37,6 +37,7 @@
 #include "usb.h"
 #include "serial.h"
 #include "oscilltrack.h"
+#include "neurobuzz.h"
 #include "esb.h"
 
 NRF_LOG_MODULE_REGISTER();
@@ -71,6 +72,7 @@ pt10_status_t pt10_status = {
     .MTUSet = 0,
     .enter_deep_sleep = false,
     .debug_sensor = DEBUG_NONE,
+    .hardware_revision = 'U',
 };
 
 void PT10_STATE_timer_handler(void *p_context);
@@ -261,7 +263,7 @@ void pt10_init(void)
         PT10_LOG_FLUSH();
         
         // init storage
-        local_err = storage_init(false);
+        local_err = storage_init(true);
         if (local_err != 0)
         {
             NRF_LOG_WARNING("storage err");
@@ -311,6 +313,18 @@ void pt10_init(void)
     // streaming_init();
     // serial_init();
     oscilltrack_init();
+    local_err = neurobuzz_init();
+    if(local_err != 0)
+    {
+        NRF_LOG_WARNING("neurobuzz err");
+        init_err += 1;
+    }
+    else
+    {
+        NRF_LOG_INFO("neurobuzz ok");
+    }
+    PT10_LOG_FLUSH();
+    local_err = 0;
 
     ret_code_t err_code = app_timer_create(&_state_timer, APP_TIMER_MODE_REPEATED, PT10_STATE_timer_handler);
     APP_ERROR_CHECK(err_code);
@@ -487,6 +501,7 @@ void pt10_run(void)
                 err |= mag_set_mode(mag_mode_off);
                 err |= afe_set_mode(pt10_status.afe_mode);
                 last_connection_state = pt10_status.ble_connected;
+                neurobuzz_start();
                 next_state = PT10_STATE_IDLE;
             }
             
@@ -500,6 +515,7 @@ void pt10_run(void)
                 oscilltrack_start(); // TODO: just for now - to aid testing
                 err |= led_set_for_state(led_state_charging);
                 state_update_ticks = APP_TIMER_TICKS(ON_DOCK_UPDATE_MS);
+                neurobuzz_start();
                 next_state = PT10_STATE_ON_DOCK;
             }
             else if (current_charge_state == BATTERY_CHARGE_COMPLETED)
@@ -511,6 +527,7 @@ void pt10_run(void)
                 oscilltrack_start();
                 err |= led_set_for_state(led_state_charge_complete);
                 state_update_ticks = APP_TIMER_TICKS(ON_DOCK_UPDATE_MS);
+                neurobuzz_start();
                 next_state = PT10_STATE_ON_DOCK;
             }
 
@@ -542,6 +559,7 @@ void pt10_run(void)
                 last_connection_state = pt10_status.ble_connected;
                 // serialStop();
                 good_connection_counter = GOOD_CONNECTION_UPDATES;
+                neurobuzz_start();
                 next_state = PT10_STATE_IDLE;
             }
 
@@ -563,14 +581,13 @@ void pt10_run(void)
 
     case PT10_STATE_ON_DOCK:
 
-        esb_update();
-
         // err |= epoch_recording_update();
         // err |= epoch_storage_update();
         // err |= epoch_synthesize_update();
         // err |= epoch_transmission_update();
 
-        err |= oscilltrack_update();
+        err |= neurobuzz_update();
+        esb_update();
 
         if (_state_timer_elapsed)
         {
@@ -629,9 +646,8 @@ void pt10_run(void)
 
     case PT10_STATE_IDLE:
 
+        err |= neurobuzz_update();
         esb_update();
-
-        err |= oscilltrack_update();
 
         if (_state_timer_elapsed)
         {
@@ -659,6 +675,7 @@ void pt10_run(void)
             {
                 err |= led_set_for_state(led_state_shutdown);
                 state_update_ticks = APP_TIMER_TICKS(SHUTDOWN_UPDATE_MS);
+                neurobuzz_stop();
                 next_state = PT10_STATE_SHUTDOWN;
             } 
 
@@ -668,6 +685,7 @@ void pt10_run(void)
                 pt10_status.enter_deep_sleep = false;
                 err |= led_set_for_state(led_state_deep_sleep_prep);
                 state_update_ticks = APP_TIMER_TICKS(DEEP_SLEEP_PREP_UPDATE_MS);
+                neurobuzz_stop();
                 next_state = PT10_STATE_DEEP_SLEEP_PREP;
             }
 
@@ -727,7 +745,7 @@ void pt10_run(void)
                     err |= afe_set_mode(afe_mode_off);
                     err |= mag_set_mode(mag_mode_off);
                     flash_lower_power_mode(true);
-            
+                    neurobuzz_stop();
                     next_state = PT10_STATE_SLEEP;
                 }
             }
@@ -738,10 +756,9 @@ void pt10_run(void)
         break;
 
     case PT10_STATE_RECORDING:
-
-        esb_update();
         
-        err |= oscilltrack_update();
+        err |= neurobuzz_update();
+        esb_update();
 
         if (_state_timer_elapsed)
         {
@@ -793,6 +810,7 @@ void pt10_run(void)
                 err |= acc_set_mode(acc_mode_off);
                 err |= mag_set_mode(mag_mode_off);
                 state_update_ticks = APP_TIMER_TICKS(SHUTDOWN_UPDATE_MS);
+                neurobuzz_stop();
                 next_state = PT10_STATE_SHUTDOWN;
             }
 
@@ -905,6 +923,7 @@ void pt10_run(void)
                 state_update_ticks = APP_TIMER_TICKS(ON_DOCK_UPDATE_MS);
                 last_charge_state = current_charge_state;
                 // serialStart();
+                neurobuzz_start();
                 next_state = PT10_STATE_ON_DOCK;
             }
             else if (current_charge_state == BATTERY_CHARGE_COMPLETED)
@@ -917,6 +936,7 @@ void pt10_run(void)
                 state_update_ticks = APP_TIMER_TICKS(ON_DOCK_UPDATE_MS);
                 last_charge_state = current_charge_state;
                 // serialStart();
+                neurobuzz_start();
                 next_state = PT10_STATE_ON_DOCK;
             }
 
@@ -945,6 +965,7 @@ void pt10_run(void)
                     }
                 }   
                 state_update_ticks = APP_TIMER_TICKS(IDLE_UPDATE_MS);
+                neurobuzz_start();
                 next_state = PT10_STATE_IDLE;
             }
 
@@ -1011,6 +1032,7 @@ void pt10_run(void)
                 state_update_ticks = APP_TIMER_TICKS(ON_DOCK_UPDATE_MS);
                 last_charge_state = current_charge_state;
                 // serialStart();
+                neurobuzz_start();
                 next_state = PT10_STATE_ON_DOCK;
             }
             else if (current_charge_state == BATTERY_CHARGE_COMPLETED)
@@ -1022,6 +1044,7 @@ void pt10_run(void)
                 state_update_ticks = APP_TIMER_TICKS(ON_DOCK_UPDATE_MS);
                 last_charge_state = current_charge_state;
                 // serialStart();
+                neurobuzz_start();
                 next_state = PT10_STATE_ON_DOCK;
             }
         }
@@ -1051,6 +1074,8 @@ void pt10_run(void)
         break;
 
     case PT10_STATE_ERROR:
+        // try our best to allow communication
+        esb_update();
         break;
 
     default:
@@ -1163,24 +1188,8 @@ int32_t pt10_set_device_id(int32_t new_device_id)
 {
     int32_t err = 0;
 
-    err = set_device_id(new_device_id);
-    if(!err)
-    {
-        err = save_info_to_local_flash(store_reason_set_device_id);
-    }
-
-    if (err != 0)
-    {
-        NRF_LOG_WARNING("failed to save new id");
-    }
-    else
-    {
-        hal_wdt_feed();
-        hal_delay_ms(200);
-        hal_wdt_feed();
-        hal_delay_ms(200);
-        sw_reset();
-    }
+    // Ignore this command.
+    // Dystonia FW will not set the Device ID.
 
     return err;
 
@@ -1413,10 +1422,10 @@ int32_t pt10_cmd_processor(uint8_t *command, uint8_t *response)
         break;
 
     case PT10_CMD_GET_HARDWARE_VERSION:
-        response[1] = (uint8_t)((HARDWARE_VERSION >> 24) & 0xff);
-        response[2] = (uint8_t)((HARDWARE_VERSION >> 16) & 0xff);
-        response[3] = (uint8_t)((HARDWARE_VERSION >> 8) & 0xff);
-        response[4] = (uint8_t)((HARDWARE_VERSION >> 0) & 0xff);
+        response[1] = (uint8_t)((pt10_status.hardware_revision >> 24) & 0xff);
+        response[2] = (uint8_t)((pt10_status.hardware_revision >> 16) & 0xff);
+        response[3] = (uint8_t)((pt10_status.hardware_revision >> 8) & 0xff);
+        response[4] = (uint8_t)((pt10_status.hardware_revision >> 0) & 0xff);
         break;
 
     case PT10_CMD_GET_POST_RESULT:
@@ -1543,6 +1552,104 @@ int32_t pt10_cmd_processor(uint8_t *command, uint8_t *response)
     }
         break;
 
+    case PT10_CMD_SET_NEUROBUZZ_LONG_DUR:
+    {
+        uint32_t dur;
+        dur = (
+            ((uint32_t)command[1] << 24) | 
+            ((uint32_t)command[2] << 16) | 
+            ((uint32_t)command[3] << 8) | 
+            ((uint32_t)command[4])
+        );
+        set_neurobuzz_long_dur(dur);
+        neurobuzz_set_long_dur(dur);
+    }
+        break;
+
+    case PT10_CMD_GET_NEUROBUZZ_LONG_DUR:
+    {
+        uint32_t dur;
+        neurobuzz_get_long_dur(&dur);
+        response[1] = (uint8_t)((dur >> 24) & 0xff);
+        response[2] = (uint8_t)((dur >> 16) & 0xff);
+        response[3] = (uint8_t)((dur >> 8) & 0xff);
+        response[4] = (uint8_t)((dur >> 0) & 0xff);
+    }
+        break;
+
+    case PT10_CMD_SET_NEUROBUZZ_SHORT_DUR:
+    {
+        uint32_t dur;
+        dur = (
+            ((uint32_t)command[1] << 24) | 
+            ((uint32_t)command[2] << 16) | 
+            ((uint32_t)command[3] << 8) | 
+            ((uint32_t)command[4])
+        );
+        set_neurobuzz_short_dur(dur);
+        neurobuzz_set_short_dur(dur);
+    }
+        break;
+
+    case PT10_CMD_GET_NEUROBUZZ_SHORT_DUR:
+    {
+        uint32_t dur;
+        neurobuzz_get_short_dur(&dur);
+        response[1] = (uint8_t)((dur >> 24) & 0xff);
+        response[2] = (uint8_t)((dur >> 16) & 0xff);
+        response[3] = (uint8_t)((dur >> 8) & 0xff);
+        response[4] = (uint8_t)((dur >> 0) & 0xff);
+    }
+        break;
+
+    case PT10_CMD_SET_NEUROBUZZ_SWITCH_STIM_GAP:
+    {
+        uint32_t gap;
+        gap = (
+            ((uint32_t)command[1] << 24) | 
+            ((uint32_t)command[2] << 16) | 
+            ((uint32_t)command[3] << 8) | 
+            ((uint32_t)command[4])
+        );
+        set_neurobuzz_switch_stim_gap(gap);
+        neurobuzz_set_switch_stim_gap(gap);
+    }
+        break;
+
+    case PT10_CMD_GET_NEUROBUZZ_SWITCH_STIM_GAP:
+    {
+        uint32_t gap;
+        neurobuzz_get_switch_stim_gap(&gap);
+        response[1] = (uint8_t)((gap >> 24) & 0xff);
+        response[2] = (uint8_t)((gap >> 16) & 0xff);
+        response[3] = (uint8_t)((gap >> 8) & 0xff);
+        response[4] = (uint8_t)((gap >> 0) & 0xff);
+    }
+        break;
+
+    case PT10_CMD_SET_NEUROBUZZ_STEP_NEAR_PREFERRED_PHASE:
+    {
+        int16_t step;
+        step = (
+            ((uint32_t)command[1] << 8) | 
+            ((uint32_t)command[2] << 0)
+        );
+        set_neurobuzz_step_near_preferred_phase(step);
+        neurobuzz_set_step_near_preferred_phase(step);
+    }
+        break;
+
+    case PT10_CMD_GET_NEUROBUZZ_STEP_NEAR_PREFERRED_PHASE:
+    {
+        int16_t step;
+        neurobuzz_get_step_near_preferred_phase(&step);
+        response[1] = (uint8_t)((step >> 8) & 0xff);
+        response[2] = (uint8_t)((step >> 0) & 0xff);
+        response[3] = 0;
+        response[4] = 0;
+    }
+        break;    
+
     case PT10_CMD_STORE_OSCILLTRACK_PARAMETERS:
         save_info_to_local_flash(store_reason_set_oscilltrack_parameters);
         break;
@@ -1578,6 +1685,121 @@ int32_t pt10_cmd_processor(uint8_t *command, uint8_t *response)
 
     case PT10_CMD_CONFIGURE_VTS_SLEEP:
         esb_configure_vts_sleep(command+1);
+        break;
+
+    case PT10_CMD_UI_SHORT_PRESS:
+    {
+        NRF_LOG_DEBUG("UI Short Press");
+        uint32_t serial_number = (
+            ((uint32_t)command[1] << 24) | 
+            ((uint32_t)command[2] << 16) | 
+            ((uint32_t)command[3] << 8) | 
+            ((uint32_t)command[4])
+        );
+        neurobuzz_ui_short_press(serial_number);
+    }
+        break;
+
+    case PT10_CMD_UI_LONG_PRESS:
+    {
+        NRF_LOG_DEBUG("UI Long Press");
+        uint32_t serial_number = (
+            ((uint32_t)command[1] << 24) | 
+            ((uint32_t)command[2] << 16) | 
+            ((uint32_t)command[3] << 8) | 
+            ((uint32_t)command[4])
+        );
+        neurobuzz_ui_long_press(serial_number);
+    }
+        break;
+
+    case PT10_CMD_UI_VERY_LONG_PRESS:
+    {
+        NRF_LOG_DEBUG("UI Very Long Press");
+        uint32_t serial_number = (
+            ((uint32_t)command[1] << 24) | 
+            ((uint32_t)command[2] << 16) | 
+            ((uint32_t)command[3] << 8) | 
+            ((uint32_t)command[4])
+        );
+        neurobuzz_ui_very_long_press(serial_number);
+    }
+        break;
+
+    case PT10_CMD_UI_DOUBLE_CLICK:
+    {
+        NRF_LOG_DEBUG("UI Double Click");
+        uint32_t serial_number = (
+            ((uint32_t)command[1] << 24) | 
+            ((uint32_t)command[2] << 16) | 
+            ((uint32_t)command[3] << 8) | 
+            ((uint32_t)command[4])
+        );
+        neurobuzz_ui_double_click(serial_number);
+    }
+        break;
+
+    case PT10_CMD_GET_NEUROBUZZ_FIRST_PHASE:
+    {
+        int16_t phase;
+        neurobuzz_get_first_phase(&phase);
+        response[1] = (uint8_t)((phase >> 8) & 0xff);
+        response[2] = (uint8_t)((phase >> 0) & 0xff);
+        response[3] = 0;
+        response[4] = 0;
+    }
+        break;
+
+    case PT10_CMD_GET_NEUROBUZZ_NEXT_PHASE:
+    {
+        int16_t phase;
+        neurobuzz_get_next_phase(&phase);
+        response[1] = (uint8_t)((phase >> 8) & 0xff);
+        response[2] = (uint8_t)((phase >> 0) & 0xff);
+        response[3] = 0;
+        response[4] = 0;
+    }
+        break;
+
+    case PT10_CMD_GET_NEUROBUZZ_CURRENT_PHASE_IDX:
+    {
+        uint8_t idx;
+        neurobuzz_get_current_phase_idx(&idx);
+        response[1] = idx;
+        response[2] = 0;
+        response[3] = 0;
+        response[4] = 0;
+    }
+        break;
+
+    case PT10_CMD_SET_NEUROBUZZ_FIRST_DEFAULT_PHASE:
+    {
+        int16_t phase;
+        phase = ((int16_t)command[1] << 8 ) | 
+                ((int16_t)command[2] << 0);
+        neurobuzz_set_first_default_phase(phase);
+        neurobuzz_reset_phases();
+        set_neurobuzz_first_default_phase(phase);
+    }
+        break;
+
+    case PT10_CMD_SET_NEUROBUZZ_NEXT_DEFAULT_PHASE:
+    {
+        int16_t phase;
+        phase = ((int16_t)command[1] << 8 ) | 
+                ((int16_t)command[2] << 0);
+        neurobuzz_set_next_default_phase(phase);
+        neurobuzz_reset_phases();
+        set_neurobuzz_next_default_phase(phase);
+    }
+        break;
+
+    case PT10_CMD_DISABLE_NEUROBUZZ_REFINEMENT:
+    {
+        bool disabled = (command[1] == 0x01);
+        neurobuzz_disable_refinement(disabled);
+        set_neurobuzz_disable_refinement(disabled);
+    }
         break;
 
     case PT10_CMD_ENTER_DEEP_SLEEP_MODE:
@@ -1628,4 +1850,38 @@ void pt10_set_uart_connected(bool connected)
 bool pt10_get_uart_connected(void)
 {
     return pt10_status.uart_connected;
+}
+
+int32_t get_device_id(uint32_t *device_id)
+{
+    int32_t err = 0;
+
+    uint32_t _device_id = NRF_UICR->CUSTOMER[0];
+    if(_device_id == 0xFFFFFFFF)
+    {
+        *device_id = 0x000000FF;
+    }
+    else
+    {
+        *device_id = _device_id;
+    }
+
+    return err;
+}
+
+int32_t get_hardware_revision(uint32_t *hardware_revision)
+{
+    int32_t err = 0;
+
+    uint32_t _hardware_revision = NRF_UICR->CUSTOMER[1];
+    if(_hardware_revision == 0xFFFFFFFF)
+    {
+        *hardware_revision = (uint32_t)'U';
+    }
+    else
+    {
+        *hardware_revision = _hardware_revision;
+    }
+
+    return err;
 }

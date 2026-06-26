@@ -282,10 +282,12 @@ int main(void)
     // Initialize.
     log_init();
 
+    get_device_id(&m_ble_id);
+    get_hardware_revision(&pt10_status.hardware_revision);
+
     // get device ID
     init_internal_flash();
     read_stored_data();
-    get_device_id(&m_ble_id);
     get_deep_sleep_flag(&m_deep_sleep_flag);
 
     if(m_deep_sleep_flag == 1)

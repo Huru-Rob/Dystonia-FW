@@ -109,6 +109,24 @@ typedef enum{
     PT10_CMD_SET_CONVERGENCE_GAIN = 37,
     PT10_CMD_CONFIGURE_VTS_HAPTIC = 38,
     PT10_CMD_CONFIGURE_VTS_SLEEP = 39,
+    PT10_CMD_UI_SHORT_PRESS = 40,
+    PT10_CMD_UI_LONG_PRESS = 41,
+    PT10_CMD_UI_VERY_LONG_PRESS = 42,
+    PT10_CMD_UI_DOUBLE_CLICK = 43,
+    PT10_CMD_GET_NEUROBUZZ_FIRST_PHASE = 44,
+    PT10_CMD_GET_NEUROBUZZ_NEXT_PHASE = 45,
+    PT10_CMD_GET_NEUROBUZZ_CURRENT_PHASE_IDX = 46,
+    PT10_CMD_SET_NEUROBUZZ_LONG_DUR = 49,
+    PT10_CMD_GET_NEUROBUZZ_LONG_DUR = 50,
+    PT10_CMD_SET_NEUROBUZZ_SHORT_DUR = 51,
+    PT10_CMD_GET_NEUROBUZZ_SHORT_DUR = 52,
+    PT10_CMD_SET_NEUROBUZZ_SWITCH_STIM_GAP = 53,
+    PT10_CMD_GET_NEUROBUZZ_SWITCH_STIM_GAP = 54,
+    PT10_CMD_SET_NEUROBUZZ_STEP_NEAR_PREFERRED_PHASE = 55,
+    PT10_CMD_GET_NEUROBUZZ_STEP_NEAR_PREFERRED_PHASE = 56,
+    PT10_CMD_SET_NEUROBUZZ_FIRST_DEFAULT_PHASE = 57,
+    PT10_CMD_SET_NEUROBUZZ_NEXT_DEFAULT_PHASE = 58,
+    PT10_CMD_DISABLE_NEUROBUZZ_REFINEMENT = 59,
 
     PT10_CMD_ENTER_DEEP_SLEEP_MODE = 0xFD,
     PT10_CMD_ENTER_DFU = 0xFE,
@@ -150,6 +168,7 @@ typedef struct
     int32_t num_synthesized_epochs;
     uint32_t post_result;
     afe_mode_e afe_mode;
+    uint32_t hardware_revision;
 
     uint8_t debug_sensor;
 } pt10_status_t;
@@ -177,5 +196,7 @@ pt10_status_t* return_device_status_pointer(void);
 int32_t pt10_cmd_processor(uint8_t *command, uint8_t *response);
 void pt10_set_uart_connected(bool connected);
 bool pt10_get_uart_connected(void);
+int32_t get_device_id(uint32_t *device_id);
+int32_t get_hardware_revision(uint32_t *hardware_revision);
 
 #endif

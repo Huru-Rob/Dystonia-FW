@@ -118,6 +118,7 @@ SRC_FILES += \
   $(PROJ_DIR)/core/src/afe.c \
   $(PROJ_DIR)/core/src/main.c \
   $(PROJ_DIR)/core/src/oscilltrack.c \
+  $(PROJ_DIR)/core/src/neurobuzz.c \
   $(PROJ_DIR)/core/src/pt10.c \
   $(PROJ_DIR)/core/src/epoch.c \
   $(PROJ_DIR)/core/src/epoch_sto.c \

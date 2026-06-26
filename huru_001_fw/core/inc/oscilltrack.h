@@ -18,7 +18,7 @@
 
 typedef struct  __attribute__ ((__packed__)) {
     uint8_t     packet_id;          // 1
-    float       filtered;      // 5
+    float       filtered;           // 5
     float       theta;              // 9
     float       re;                 // 13
     float       im;                 // 17
@@ -42,5 +42,6 @@ void oscilltrack_set_trigger_phase(int32_t trigger_phase_degrees);
 void oscilltrack_set_suppression_duty_cycle(int32_t suppression_duty_cycle_percent);
 void oscilltrack_set_convergence_gain(int32_t convergeance_gain);
 void oscilltrack_set_flags(uint32_t flags);
+void oscilltrack_blank_stimulus(bool blank);
 
 #endif

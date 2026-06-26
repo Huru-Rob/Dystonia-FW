@@ -14,10 +14,14 @@
 			"type": "cortex-debug",
 			"servertype": "jlink",
 			"device": "nrf52",
+			"serialNumber": "000682345162",
             "interface": "swd",
             "armToolchainPath": "C:/Program Files (x86)/GNU Arm Embedded Toolchain/10 2021.10/bin",
-            "svdFile": "C:/Users/rob/NRF52/DeviceDownload/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/modules/nrfx/mdk/nrf52.svd",
-			
+            "svdFile": "C:/Users/rob/NRF52/DeviceDownload/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/modules/nrfx/mdk/nrf52840.svd",
+			"liveWatch": {
+                "enabled": true,
+                "samplesPerSecond": 5
+            },
 			"rttConfig": {
                 "enabled": true,
                 "address": "auto",

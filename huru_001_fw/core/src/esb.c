@@ -5,6 +5,8 @@
 #include "nrf_esb.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
+#include "board_config.h"
+#include "hal.h"
 #include "esb.h"
 #include "app_timer.h"
 #include "pt10.h"
@@ -48,10 +50,27 @@ static nrf_esb_payload_t        tx_payload_oscilltrack = NRF_ESB_CREATE_PAYLOAD(
     0x00, 0x00, 0x00, 0x00,  
     0x00, 0x00, 0x00, 0x00
 );
-static nrf_esb_payload_t        tx_payload_vts = NRF_ESB_CREATE_PAYLOAD(
+static nrf_esb_payload_t        tx_payload_vts_stimulus = NRF_ESB_CREATE_PAYLOAD(
     ESB_PIPE_VTS, 
     0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00,  
     0x00, 0x00, 0x00, 0x00  
+);
+static nrf_esb_payload_t        tx_payload_vts_command = NRF_ESB_CREATE_PAYLOAD(
+    ESB_PIPE_VTS, 
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00, 
+    0x00, 0x00, 0x00, 0x00,  
+    0x00, 0x00, 0x00, 0x00 
 );
 static nrf_esb_payload_t        rx_payload;
 
@@ -71,11 +90,12 @@ void esb_event_handler(nrf_esb_evt_t const * p_event)
     case NRF_ESB_EVENT_TX_SUCCESS:
         if(m_current_peripheral == prx_peripheral_stimulator)
         {
-            NRF_LOG_INFO("TX SUCCESS EVENT");
+            hal_gpio_set(PIN_RTC_EVI);
+            NRF_LOG_INFO("TX SUCCESS to VTS. Attempts: %d", p_event->tx_attempts);
         }
         else
         {
-            NRF_LOG_DEBUG("TX SUCCESS EVENT");
+            // NRF_LOG_INFO("TX SUCCESS to Bridge. Attempts: %d", p_event->tx_attempts);
         }
         esb_status.tx_done = true;
         break;
@@ -83,28 +103,29 @@ void esb_event_handler(nrf_esb_evt_t const * p_event)
         esb_status.tx_done = true;
         if(m_current_peripheral == prx_peripheral_stimulator)
         {
-            NRF_LOG_INFO("TX FAILED EVENT");
+            NRF_LOG_INFO("TX FAILED to VTS. Attempts: %d", p_event->tx_attempts);
         }
         else
         {
-            NRF_LOG_DEBUG("TX FAILED EVENT");
+            // NRF_LOG_INFO("TX FAILED to Bridge. Attempts: %d", p_event->tx_attempts);
         }
         (void) nrf_esb_flush_tx();
         (void) nrf_esb_start_tx();
         break;
     case NRF_ESB_EVENT_RX_RECEIVED:
-        NRF_LOG_DEBUG("RX RECEIVED EVENT");
+        // NRF_LOG_INFO("RX RECEIVED EVENT");
+        // NRF_LOG_HEXDUMP_INFO(rx_payload.data, rx_payload.length);
         while (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
         {
             if (rx_payload.length > 0)
             {
-                NRF_LOG_DEBUG("RX RECEIVED PAYLOAD");
-                NRF_LOG_HEXDUMP_DEBUG(rx_payload.data, rx_payload.length);
+                // NRF_LOG_DEBUG("RX RECEIVED PAYLOAD");
+                // NRF_LOG_HEXDUMP_DEBUG(rx_payload.data, rx_payload.length);
                 esb_packet_header_t *header = (esb_packet_header_t *)rx_payload.data;
                 switch(header->payload_type)
                 {
                     case esb_payload_command:
-                    
+
                         esb_packet_header_t *response_header = (esb_packet_header_t *)tx_payload_command_response.data;
                         response_header->payload_type = esb_payload_command_response;
                         response_header->payload_length = 5;                        
@@ -112,19 +133,26 @@ void esb_event_handler(nrf_esb_evt_t const * p_event)
                         uint8_t *command = (uint8_t *)rx_payload.data + sizeof(esb_packet_header_t);
                         uint8_t *response = (uint8_t *)tx_payload_command_response.data + sizeof(esb_packet_header_t);
                         
-                        NRF_LOG_INFO("Command");
-                        NRF_LOG_HEXDUMP_INFO(command, 5);
+                        // NRF_LOG_INFO("Command");
+                        // NRF_LOG_HEXDUMP_INFO(command, 5);
                         pt10_cmd_processor(command, response);
+                        tx_payload_command_response.pipe = ESB_PIPE_BRIDGE;
+                        tx_payload_command_response.pid += 1;
                         tx_payload_command_response.length = sizeof(esb_packet_header_t) + 5;
 
-                        NRF_LOG_INFO("Response");
-                        NRF_LOG_HEXDUMP_INFO(response, 5);
-                        esb_status.command_response_ready = true;                            
-                    
+                        // NRF_LOG_INFO("Response");
+                        // NRF_LOG_HEXDUMP_INFO(response, 5);
+                        esb_status.command_response_ready = true; 
+                        
                         break;
                     
                     case esb_payload_ping_response:
+                        // NRF_LOG_INFO("Ping Response");
                         esb_status.ping_response = true;
+
+                        break;
+                    default:
+                        // NRF_LOG_INFO("Other Rx Payload");
                         break;
                 }
             }
@@ -179,7 +207,7 @@ int32_t esb_init(void)
     nrf_esb_config_t nrf_esb_config         = NRF_ESB_DEFAULT_CONFIG;
     nrf_esb_config.protocol                 = NRF_ESB_PROTOCOL_ESB_DPL;
     nrf_esb_config.retransmit_delay         = 250;
-    nrf_esb_config.retransmit_count         = 1;
+    nrf_esb_config.retransmit_count         = 0;
     nrf_esb_config.bitrate                  = NRF_ESB_BITRATE_1MBPS;
     nrf_esb_config.event_handler            = esb_event_handler;
     nrf_esb_config.mode                     = NRF_ESB_MODE_PTX;
@@ -207,8 +235,9 @@ int32_t esb_init(void)
 int32_t esb_set_stimulus(void)
 {
     int32_t err = 0;
-    tx_payload_vts.length = 1;
-    tx_payload_vts.data[0] = 0;
+    tx_payload_vts_stimulus.pipe = 0;        
+    tx_payload_vts_stimulus.length = 1;
+    tx_payload_vts_stimulus.data[0] = 0;
     esb_status.stimulus_ready = true;
     return err;
 }
@@ -217,11 +246,19 @@ int32_t esb_set_oscilltrack_data(uint8_t *data, uint8_t length)
 {
     int32_t err = 0;
 
+    if(length > (32 - sizeof(esb_packet_header_t)))
+    {
+        NRF_LOG_WARNING("Truncating oscilltrack packet");
+        length = 32 - sizeof(esb_packet_header_t);
+    }
+
     esb_packet_t *packet = (esb_packet_t *)tx_payload_oscilltrack.data;
     packet->header.payload_type = esb_payload_oscilltrack_data;
     packet->header.payload_length = length;
     memcpy((uint8_t *)(tx_payload_oscilltrack.data + sizeof(esb_packet_header_t)), data, length);
     tx_payload_oscilltrack.length = sizeof(esb_packet_header_t) + length;
+    tx_payload_oscilltrack.pipe = ESB_PIPE_BRIDGE;
+    tx_payload_oscilltrack.pid += 1;
     esb_status.oscilltrack_data_ready = true;
     return err;
 
@@ -229,38 +266,48 @@ int32_t esb_set_oscilltrack_data(uint8_t *data, uint8_t length)
 
 void esb_configure_vts_haptic(uint8_t *haptic_parameters)
 {
-    tx_payload_vts.data[0] = vts_command_configure_haptic;
-    memcpy(tx_payload_vts.data+1, haptic_parameters, 4);
-    tx_payload_vts.length = 5;
+    tx_payload_vts_command.data[0] = vts_command_configure_haptic;
+    memcpy(tx_payload_vts_command.data+1, haptic_parameters, 4);
+    tx_payload_vts_command.length = 5;
     esb_status.vts_command_ready = true;
 }
 
 void esb_configure_vts_sleep(uint8_t *sleep_parameters)
 {
-    tx_payload_vts.data[0] = vts_command_configure_sleep;
-    memcpy(tx_payload_vts.data+1, sleep_parameters, 4);
-    tx_payload_vts.length = 5;
+    tx_payload_vts_command.data[0] = vts_command_configure_sleep;
+    memcpy(tx_payload_vts_command.data+1, sleep_parameters, 4);
+    tx_payload_vts_command.length = 5;
     esb_status.vts_command_ready = true;
 }
 
-int32_t esb_send_ping_packet(void)
+int32_t esb_create_ping_packet(void)
 {
     int32_t err = 0;
     
     esb_packet_t *packet = (esb_packet_t *)tx_payload_ping.data;
     packet->header.payload_type = esb_payload_ping;
     packet->header.payload_length = 0;
+    tx_payload_ping.pipe = ESB_PIPE_BRIDGE;
     tx_payload_ping.length = sizeof(esb_packet_header_t);
-    esb_status.tx_done = false;
-    esb_set_prx(prx_peripheral_usb_bridge); 
-    nrf_esb_write_payload(&tx_payload_ping);
+    
 
     return err;
 }
 
+int32_t err;
 int32_t esb_update(void)
 {
     int32_t err = 0;
+
+    static uint32_t last_count = 0;
+
+    uint32_t this_count = app_timer_cnt_get();
+    uint32_t diff = app_timer_cnt_diff_compute(this_count, last_count);
+    if(diff < 1)
+    {
+        return 0;
+    }
+    last_count = this_count;
 
     esb_state_e next_state = esb_status.state;
     switch(esb_status.state)
@@ -272,23 +319,35 @@ int32_t esb_update(void)
         break;
 
     case esb_state_unconnected:
+
         if(esb_status.stimulus_ready == true && nrf_esb_is_idle())
         {
             esb_status.tx_done = false;
-            NRF_LOG_INFO("Send Stimulus");             
+            NRF_LOG_DEBUG("Send Stimulus");             
             esb_set_prx(prx_peripheral_stimulator);
-            tx_payload_vts.data[0] = vts_command_send_haptic;
-            tx_payload_vts.length = 1;
-            nrf_esb_write_payload(&tx_payload_vts);
+            tx_payload_vts_stimulus.pipe = ESB_PIPE_VTS;
+            tx_payload_vts_stimulus.data[0] = vts_command_send_haptic;
+            tx_payload_vts_stimulus.length = 1;
+            tx_payload_vts_stimulus.pid += 1;
+            err = nrf_esb_write_payload(&tx_payload_vts_stimulus);
+            APP_ERROR_CHECK(err);
             esb_status.stimulus_ready = false;
             next_state = esb_state_unconnected_wait_tx_done;
         }
         else if(esb_status.ping_timeout == true && nrf_esb_is_idle())
         {
-            NRF_LOG_DEBUG("Send Ping");
-            esb_send_ping_packet();
+            esb_create_ping_packet();
             esb_status.ping_timeout = false;
-            app_timer_start(esb_timer, APP_TIMER_TICKS(ESB_PING_MS), (void *)NULL);
+            err = app_timer_stop(esb_timer);
+            APP_ERROR_CHECK(err);
+            err = app_timer_start(esb_timer, APP_TIMER_TICKS(ESB_PING_MS), (void *)NULL);
+            APP_ERROR_CHECK(err);
+
+            NRF_LOG_DEBUG("Send Ping");            
+            esb_status.tx_done = false;
+            esb_set_prx(prx_peripheral_usb_bridge); 
+            err = nrf_esb_write_payload(&tx_payload_ping);
+            APP_ERROR_CHECK(err);
             esb_status.ping_response = false;
             next_state = esb_state_unconnected_wait_tx_done;            
         }
@@ -296,7 +355,10 @@ int32_t esb_update(void)
         {
             NRF_LOG_INFO("Connected to Bridge");
             esb_status.ping_timeout = false;
-            app_timer_start(esb_timer, APP_TIMER_TICKS(ESB_PING_MS), (void *)NULL);
+            err = app_timer_stop(esb_timer);
+            APP_ERROR_CHECK(err);
+            err = app_timer_start(esb_timer, APP_TIMER_TICKS(ESB_PING_MS), (void *)NULL);
+            APP_ERROR_CHECK(err);
             esb_status.oscilltrack_data_ready = false;
             next_state = esb_state_connected;
         }
@@ -316,29 +378,44 @@ int32_t esb_update(void)
         break;
 
     case esb_state_connected:
+
         if(esb_status.stimulus_ready == true && nrf_esb_is_idle())
         {
-            NRF_LOG_INFO("Send Stimulus");
             esb_set_prx(prx_peripheral_stimulator); 
-            tx_payload_vts.data[0] = vts_command_send_haptic;
-            tx_payload_vts.length = 1;   
-            nrf_esb_write_payload(&tx_payload_vts);
-            esb_status.stimulus_ready = false;
+            tx_payload_vts_stimulus.pipe = ESB_PIPE_VTS;
+            tx_payload_vts_stimulus.data[0] = vts_command_send_haptic;
+            tx_payload_vts_stimulus.length = 1;
+            tx_payload_vts_stimulus.pid += 1;
+            esb_status.tx_done = false; 
+            err = nrf_esb_write_payload(&tx_payload_vts_stimulus);
+            APP_ERROR_CHECK(err);
+            NRF_LOG_INFO("Send Stimulus %d %d %d %d ", tx_payload_vts_stimulus.length, tx_payload_vts_stimulus.noack, tx_payload_vts_stimulus.pipe, tx_payload_vts_stimulus.pid);
+            NRF_LOG_HEXDUMP_INFO(tx_payload_vts_stimulus.data, 8);            
+            esb_status.stimulus_ready = false;            
             next_state = esb_state_connected_wait_tx_done;
         }
         else if(esb_status.command_response_ready == true && nrf_esb_is_idle())
         {
+            err = app_timer_stop(esb_timer);
+            APP_ERROR_CHECK(err);
+            err = app_timer_start(esb_timer, APP_TIMER_TICKS(ESB_PING_MS), (void *)NULL);  
+            APP_ERROR_CHECK(err);  
+
             NRF_LOG_DEBUG("Send Command Response");
             esb_status.tx_done = false;
-            esb_set_prx(prx_peripheral_usb_bridge);        
-            nrf_esb_write_payload(&tx_payload_command_response);
+            esb_set_prx(prx_peripheral_usb_bridge);  
+            err = nrf_esb_write_payload(&tx_payload_command_response);
+            APP_ERROR_CHECK(err);
             esb_status.command_response_ready = false;
             next_state = esb_state_connected_wait_tx_done;
         }
         else if(esb_status.vts_command_ready == true && nrf_esb_is_idle())
         {
             NRF_LOG_DEBUG("Send VTS Command");
-            nrf_esb_write_payload(&tx_payload_vts);
+            esb_status.tx_done = false;
+            esb_set_prx(prx_peripheral_stimulator);
+            err = nrf_esb_write_payload(&tx_payload_vts_command);
+            APP_ERROR_CHECK(err);
             esb_status.vts_command_ready = false;
             next_state = esb_state_connected_wait_tx_done;
         }
@@ -346,8 +423,9 @@ int32_t esb_update(void)
         {
             NRF_LOG_DEBUG("Send Oscilltrack Data");
             esb_status.tx_done = false;    
-            esb_set_prx(prx_peripheral_usb_bridge);        
-            nrf_esb_write_payload(&tx_payload_oscilltrack);
+            esb_set_prx(prx_peripheral_usb_bridge); 
+            err = nrf_esb_write_payload(&tx_payload_oscilltrack);
+            APP_ERROR_CHECK(err);
             esb_status.oscilltrack_data_ready = false;
             next_state = esb_state_connected_wait_tx_done;
         }        
@@ -355,9 +433,17 @@ int32_t esb_update(void)
         {
             NRF_LOG_INFO("Disconnected from Bridge");
             NRF_LOG_DEBUG("Send Ping");
-            esb_send_ping_packet();            
+            esb_create_ping_packet();            
             esb_status.ping_timeout = false;
-            app_timer_start(esb_timer, APP_TIMER_TICKS(ESB_PING_MS), (void *)NULL);
+            err = app_timer_stop(esb_timer);
+            APP_ERROR_CHECK(err);
+            err = app_timer_start(esb_timer, APP_TIMER_TICKS(ESB_PING_MS), (void *)NULL);  
+            APP_ERROR_CHECK(err); 
+            
+            esb_set_prx(prx_peripheral_usb_bridge); 
+            err = nrf_esb_write_payload(&tx_payload_ping);
+            APP_ERROR_CHECK(err);
+            
             esb_status.command_response_ready = false;
             next_state = esb_state_unconnected;
         }
@@ -365,23 +451,30 @@ int32_t esb_update(void)
         {
             NRF_LOG_DEBUG("Ping response");
             esb_status.ping_response = false;
-            app_timer_stop(esb_timer);
             esb_status.ping_timeout = false;
-            app_timer_start(esb_timer, APP_TIMER_TICKS(ESB_PING_MS), (void *)NULL);
+            err = app_timer_stop(esb_timer);
+            APP_ERROR_CHECK(err);
+            err = app_timer_start(esb_timer, APP_TIMER_TICKS(ESB_PING_MS), (void *)NULL);  
+            APP_ERROR_CHECK(err);  
         }
         break;
 
     case esb_state_connected_wait_tx_done:
         if(esb_status.tx_done == true)
         {
-            esb_status.tx_done = false;
-            next_state = esb_state_connected;
+            // esb_status.tx_done = false;
+            hal_gpio_clear(PIN_RTC_EVI);
+            next_state = esb_state_skip;
         }
         if(esb_status.ping_timeout == true)
         {
             // This shouldn't happen. But if we hang here, the ping timeout should save us
             next_state = esb_state_reset;
         }
+        break;
+
+    case esb_state_skip:
+        next_state = esb_state_connected;
         break;
 
     // case esb_state_ping:

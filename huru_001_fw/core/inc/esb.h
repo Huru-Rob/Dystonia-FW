@@ -44,6 +44,7 @@ typedef enum {
     esb_state_unconnected_wait_tx_done,
     esb_state_connected,
     esb_state_connected_wait_tx_done,
+    esb_state_skip,
 } esb_state_e;
 
 typedef struct {

@@ -66,6 +66,8 @@ void hal_gpio_init(void)
 	nrf_gpio_cfg_output(PIN_1V8_EN);
 	hal_gpio_set(PIN_LNA_3V0);
 	nrf_gpio_cfg_output(PIN_LNA_3V0);
+	hal_gpio_set(PIN_FLASH_ON);
+	nrf_gpio_cfg_output(PIN_FLASH_ON);
 
 	nrf_gpio_cfg_input(PIN_CHARGE_STAT, NRF_GPIO_PIN_PULLUP);
 	nrf_gpio_cfg_input(PIN_CHARGE_ERROR, NRF_GPIO_PIN_PULLUP);
@@ -102,13 +104,37 @@ void hal_set_board_for_shutdown(void)
 	hal_gpio_clear(PIN_LNA_3V0);
 	nrf_gpio_cfg_output(PIN_LNA_3V0);
 
-    hal_gpio_set(PIN_SPI1_nCS);
-	nrf_gpio_cfg_output(PIN_SPI1_nCS);
-    hal_gpio_clear(PIN_SPI1_SDO);
+    // The FLASH is kept on until the load switch is
+	// implemented in Rev E.
+	// This is because nCS is held high.
+	// TODO: When Rev E is built, hold nCS los
+	// and turn the power off.
+
+	hal_gpio_clear(PIN_SPI1_SDO);
 	nrf_gpio_cfg_output(PIN_SPI1_SDO);
-    hal_gpio_clear(PIN_SPI1_CLK);
+	hal_gpio_clear(PIN_SPI1_CLK);
 	nrf_gpio_cfg_output(PIN_SPI1_CLK);
-    nrf_gpio_cfg_input(PIN_SPI1_SDI, NRF_GPIO_PIN_PULLDOWN);
+	nrf_gpio_cfg_input(PIN_SPI1_SDI, NRF_GPIO_PIN_PULLDOWN);
+
+	switch(pt10_status.hardware_revision)
+	{
+		case 'U':
+		case 'D':
+			hal_gpio_set(PIN_SPI1_nCS);
+			nrf_gpio_cfg_output(PIN_SPI1_nCS);
+			
+			hal_gpio_set(PIN_FLASH_ON);
+			nrf_gpio_cfg_output(PIN_FLASH_ON);
+			break;
+
+		case 'E':
+			hal_gpio_clear(PIN_SPI1_nCS);
+			nrf_gpio_cfg_output(PIN_SPI1_nCS);
+
+			hal_gpio_clear(PIN_FLASH_ON);
+			nrf_gpio_cfg_output(PIN_FLASH_ON);
+
+	}
 
     //hal_gpio_set(PIN_I2C2_SCL);
 	hal_gpio_clear(PIN_I2C2_SCL);

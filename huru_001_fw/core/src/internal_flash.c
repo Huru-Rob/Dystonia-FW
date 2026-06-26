@@ -10,6 +10,7 @@
 #include "internal_flash.h"
 #include "hal.h"
 #include "oscilltrack.h"
+#include "neurobuzz.h"
 
 NRF_LOG_MODULE_REGISTER();
 
@@ -104,24 +105,6 @@ int32_t init_internal_flash(void)
     return err;
 }
 
-
-
-
-int32_t set_device_id(uint32_t device_id)
-{
-    int32_t err = 0;
-    nv_params.device_id = device_id;
-    return err;
-}
-
-int32_t get_device_id(uint32_t *p_device_id)
-{
-    int32_t err = 0;
-    *p_device_id = nv_params.device_id;
-
-    return err;
-}
-
 int32_t set_deep_sleep_flag(uint32_t deep_sleep_flag)
 {
     int32_t err = 0;
@@ -197,6 +180,96 @@ int32_t get_oscilltrack_flags(uint32_t *flags)
     return err;
 }
 
+int32_t set_neurobuzz_phases(int16_t *phases, uint8_t num_phases)
+{
+    int32_t err = 0;
+    for(uint8_t i = 0; i < num_phases; i++)
+    {
+        nv_params.phases[i] = phases[i];
+    }
+    nv_params.num_phases = num_phases;
+    return err;
+}
+int32_t get_neurobuzz_phases(int16_t *phases, uint8_t *num_phases)
+{
+    int32_t err = 0;
+    for(uint8_t i = 0; i < nv_params.num_phases; i++)
+    {
+        phases[i] = nv_params.phases[i];
+    }
+    *num_phases = nv_params.num_phases;
+    return err;
+}
+int32_t get_neurobuzz_long_dur(uint32_t *long_dur){
+    int32_t err = 0;
+    *long_dur = nv_params.long_dur;
+    return err;
+}
+int32_t set_neurobuzz_long_dur(uint32_t long_dur){
+    int32_t err = 0;
+    nv_params.long_dur = long_dur;
+    return err;
+}
+int32_t get_neurobuzz_short_dur(uint32_t *short_dur){
+    int32_t err = 0;
+    *short_dur = nv_params.short_dur;
+    return err;
+}
+int32_t set_neurobuzz_short_dur(uint32_t short_dur){
+    int32_t err = 0;
+    nv_params.short_dur = short_dur;
+    return err;
+}
+int32_t get_neurobuzz_switch_stim_gap(uint32_t *switch_stim_gap){
+    int32_t err = 0;
+    *switch_stim_gap = nv_params.switch_stim_gap;    
+    return err;
+}
+int32_t set_neurobuzz_switch_stim_gap(uint32_t switch_stim_gap){
+    int32_t err = 0;
+    nv_params.switch_stim_gap = switch_stim_gap;
+    return err;
+}
+int32_t get_neurobuzz_step_near_preferred_phase(int16_t *step){
+    int32_t err = 0;
+    *step = nv_params.step_near_preferred_phase;
+    return err;
+}
+int32_t set_neurobuzz_step_near_preferred_phase(int16_t step){
+    int32_t err = 0;
+    nv_params.step_near_preferred_phase = step;
+    return err;
+}
+int32_t set_neurobuzz_first_default_phase(int16_t phase)
+{
+    int32_t err = 0;
+    nv_params.phases[0] = phase;
+    nv_params.num_phases = 1;
+    return err;
+}
+int32_t set_neurobuzz_next_default_phase(int16_t phase)
+{
+    int32_t err = 0;
+    if(nv_params.num_phases < NEUROBUZZ_MAX_PHASES)
+    {
+        nv_params.phases[nv_params.num_phases] = phase;
+        nv_params.num_phases += 1;
+    }
+    return err;
+}
+int32_t set_neurobuzz_disable_refinement(bool disabled)
+{
+    int32_t err = 0;
+    nv_params.disable_refinement = disabled ? 1:0;
+    return err;
+}
+int32_t get_neurobuzz_disable_refinement(uint8_t *disabled)
+{
+    int32_t err = 0;
+    *disabled = nv_params.disable_refinement;
+    return err;
+}
+
 void init_nv_params(void)
 {
     nv_params.device_id = 255;
@@ -208,6 +281,17 @@ void init_nv_params(void)
     nv_params.trigger_phase = 0;
     nv_params.convergence_gain = 125;
     nv_params.flags = (1 << OSCILLTRACK_STIMULUS_ON_BITPOS);
+    nv_params.long_dur = NEUROBUZZ_LONG_DUR_MS;
+    nv_params.short_dur = NEUROBUZZ_SHORT_DUR_MS;
+    nv_params.switch_stim_gap = NEUROBUZZ_SWITCH_STIM_GAP_MS;
+    nv_params.step_near_preferred_phase = NEUROBUZZ_STEP_NEAR_PREFERRED_PHASE;
+    int16_t default_phases[NEUROBUZZ_MAX_PHASES] = {-90, 90, -150, -30, 150, 30};
+    for(uint8_t i = 0; i < NEUROBUZZ_MAX_PHASES; i++)
+    {
+        nv_params.phases[i] = default_phases[i];
+    } 
+    nv_params.num_phases = 6;
+
 }
 
 int32_t save_info_to_local_flash(uint32_t reason)
