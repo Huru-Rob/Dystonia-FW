@@ -29,6 +29,7 @@ neurobuzz_status_t neurobuzz_status = {
     .next_state = neurobuzz_state_reset,
     .switching_mode = slow_switching_mode_mark,
     .pulse_counter = 0,
+    .burst_counter = 0,
     .short_press = false,
     .long_press = false,
     .very_long_press = false,
@@ -110,13 +111,13 @@ int32_t neurobuzz_init(void)
     {
         excl_bad_phases[i] = 0;
     }
-    get_neurobuzz_phases(default_phases, &n_default_phases);
-    neurobuzz_reset_phases();
+    get_neurobuzz_phases(default_phases, &n_default_phases);    
     bool corrupt = false;
-    if(neurobuzz_status.num_phases > NEUROBUZZ_MAX_PHASES)
+    if(n_default_phases > NEUROBUZZ_MAX_PHASES)
     {
         corrupt = true;
     }
+    neurobuzz_reset_phases();
     
     for(uint8_t i = 0; i < neurobuzz_status.num_phases && i < NEUROBUZZ_MAX_PHASES; i++)
     {
@@ -187,6 +188,7 @@ void neurobuzz_advance_phase(void)
     }
     int16_t new_phase = excl_bad_phases[neurobuzz_status.current_phase_idx];
     oscilltrack_set_trigger_phase(excl_bad_phases[neurobuzz_status.current_phase_idx]);
+    set_oscilltrack_trigger_phase(excl_bad_phases[neurobuzz_status.current_phase_idx]);
     NRF_LOG_INFO("advancing phase %d -> %d", old_phase, new_phase);    
 }
 
@@ -296,7 +298,8 @@ void neurobuzz_machine(void *p_context)
                 break;
             }
             oscilltrack_blank_stimulus(true);
-            neurobuzz_status.pulse_counter = (3+1);
+            neurobuzz_status.pulse_counter = (LONG_PRESS_N_PULSES-1);
+            neurobuzz_status.burst_counter = (LONG_PRESS_N_BURSTS-1);
             neurobuzz_status.next_state = neurobuzz_state_long_press_pulse;
             next_update_ms = LONG_PRESS_PULSE_PERIOD;
         }
@@ -307,7 +310,7 @@ void neurobuzz_machine(void *p_context)
             neurobuzz_status.switching_mode = slow_switching_mode_mark;
             neurobuzz_status.phase_switch_update_counter = neurobuzz_status.long_dur / NEUROBUZZ_IDLE_UPDATE_PERIOD;
             oscilltrack_blank_stimulus(true);
-            neurobuzz_status.pulse_counter = 40;
+            neurobuzz_status.pulse_counter = (VERY_LONG_PRESS_N_PULSES-1);
             neurobuzz_status.next_state = neurobuzz_state_very_long_press_pulse;
             next_update_ms = VERY_LONG_PRESS_PULSE_PERIOD;
         }
@@ -322,25 +325,25 @@ void neurobuzz_machine(void *p_context)
             case slow_switching_mode_mark:
             case slow_switching_mode_space:
                 neurobuzz_status.switching_mode = fast_switching_mode;
-                neurobuzz_status.pulse_counter = (30+1);
+                neurobuzz_status.pulse_counter = (DOUBLE_CLICK_N_PULSES_SLOW_TO_FAST-1);
                 neurobuzz_status.phase_switch_update_counter = neurobuzz_status.short_dur / NEUROBUZZ_IDLE_UPDATE_PERIOD;
                 next_update_ms = DOUBLE_CLICK_PULSE_PERIOD_SLOW_TO_FAST;
                 break;
             case fast_switching_mode:
                 neurobuzz_status.switching_mode = slow_switching_mode_mark;
-                neurobuzz_status.pulse_counter = (16+1);
+                neurobuzz_status.pulse_counter = (DOUBLE_CLICK_N_PULSES_FAST_TO_SLOW-1);
                 neurobuzz_status.phase_switch_update_counter = neurobuzz_status.long_dur / NEUROBUZZ_IDLE_UPDATE_PERIOD;
                 next_update_ms = DOUBLE_CLICK_PULSE_PERIOD_FAST_TO_SLOW;
                 break;
             case slow_hold:
                 neurobuzz_status.switching_mode = slow_switching_mode_mark;
-                neurobuzz_status.pulse_counter = (30+1);
+                neurobuzz_status.pulse_counter = (DOUBLE_CLICK_N_PULSES_SLOW_HOLD_TO_SLOW-1);
                 neurobuzz_status.phase_switch_update_counter = neurobuzz_status.long_dur / NEUROBUZZ_IDLE_UPDATE_PERIOD;
                 next_update_ms = DOUBLE_CLICK_PULSE_PERIOD_FAST_TO_SLOW;                
                 break;
             case fast_hold:
                 neurobuzz_status.switching_mode = fast_switching_mode;
-                neurobuzz_status.pulse_counter = (16+1);
+                neurobuzz_status.pulse_counter = (DOUBLE_CLICK_N_PULSES_FAST_HOLD_TO_FAST-1);
                 neurobuzz_status.phase_switch_update_counter = neurobuzz_status.short_dur / NEUROBUZZ_IDLE_UPDATE_PERIOD;
                 next_update_ms = DOUBLE_CLICK_PULSE_PERIOD_SLOW_TO_FAST;                
                 break;
@@ -420,58 +423,55 @@ void neurobuzz_machine(void *p_context)
         break;   
 
     case neurobuzz_state_long_press_pulse:
-        NRF_LOG_INFO("long press pulse");
+        NRF_LOG_INFO("Long Press. Burst %d, Pulse %d", neurobuzz_status.burst_counter, neurobuzz_status.pulse_counter);
         esb_set_stimulus();
         if(neurobuzz_status.pulse_counter > 0)        
         {
             neurobuzz_status.pulse_counter -= 1;
-        }
-        if(neurobuzz_status.pulse_counter == 0)
-        {
-            oscilltrack_blank_stimulus(false);
-            neurobuzz_status.next_state = neurobuzz_state_idle;
-            next_update_ms = 100;
+            next_update_ms = LONG_PRESS_PULSE_PERIOD;
         }
         else
         {
-            next_update_ms = LONG_PRESS_PULSE_PERIOD;
+            if(neurobuzz_status.pulse_counter == 0)
+            {
+                if(neurobuzz_status.burst_counter > 0)
+                {
+                    neurobuzz_status.burst_counter -= 1;
+                    neurobuzz_status.pulse_counter = LONG_PRESS_N_PULSES-1;
+                    next_update_ms = LONG_PRESS_BURST_GAP;
+                }
+                else
+                {
+                    oscilltrack_blank_stimulus(false);
+                    neurobuzz_status.next_state = neurobuzz_state_idle;
+                    next_update_ms = 100;
+                }
+            }
         }
         break;
 
     case neurobuzz_state_very_long_press_pulse:
-        NRF_LOG_INFO("very long press pulse");
+        NRF_LOG_INFO("Very Long Press. Pulse %d", neurobuzz_status.pulse_counter);
         esb_set_stimulus();
         if(neurobuzz_status.pulse_counter > 0)        
         {
             neurobuzz_status.pulse_counter -= 1;
+            next_update_ms = VERY_LONG_PRESS_PULSE_PERIOD;
         }
-        if(neurobuzz_status.pulse_counter == 0)
-        {
+        else
+        {        
             oscilltrack_blank_stimulus(false);
             neurobuzz_status.next_state = neurobuzz_state_idle;
             next_update_ms = 100;
-        }
-        else
-        {
-            next_update_ms = VERY_LONG_PRESS_PULSE_PERIOD;
         }
         break;
 
     case neurobuzz_state_double_click_pulse:
-        NRF_LOG_INFO("double-click pulse");
+        NRF_LOG_INFO("Double-Click. Pulse %d", neurobuzz_status.pulse_counter);
         esb_set_stimulus();
         if(neurobuzz_status.pulse_counter > 0)        
         {
             neurobuzz_status.pulse_counter -= 1;
-        }
-        if(neurobuzz_status.pulse_counter == 0)
-        {
-            oscilltrack_blank_stimulus(false);
-            neurobuzz_status.next_state = neurobuzz_state_idle;
-            next_update_ms = 100;
-        }
-        else
-        {
             switch(neurobuzz_status.switching_mode)
             {
             case slow_switching_mode_mark:
@@ -484,6 +484,12 @@ void neurobuzz_machine(void *p_context)
                 next_update_ms = DOUBLE_CLICK_PULSE_PERIOD_SLOW_TO_FAST;
                 break;
             }
+        }
+        else
+        {
+            oscilltrack_blank_stimulus(false);
+            neurobuzz_status.next_state = neurobuzz_state_idle;
+            next_update_ms = 100;
         }
         break;
 

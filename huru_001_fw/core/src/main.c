@@ -225,7 +225,7 @@ static void idle_state_handle(void)
     {
 #if POWER_MANAGEMENT == 1 
 
-        hal_spi_uninit(); // Dangerous if there's an erase operation in progress?
+        // hal_spi_uninit(); // Dangerous if there's an erase operation in progress?
         hal_i2c0_uninit();
         hal_adc_uninit();
         hal_i2c2_uninit();
@@ -235,7 +235,7 @@ static void idle_state_handle(void)
         hal_i2c2_init();
         hal_adc_init();
         hal_i2c0_init();
-        hal_spi_init();
+        // hal_spi_init();
 
 #endif
     }

@@ -2,7 +2,7 @@
 #define ESB_H_INCLUDED
 
 #define NUM_PRX_PERIPHERALS         (2)
-#define ESB_PIPE_BRIDGE             (0)
+#define ESB_PIPE_BRIDGE             (1)
 #define ESB_PIPE_VTS                (0)
 #define ESB_PING_MS                 (1000)
 
@@ -25,7 +25,9 @@ typedef enum {
     esb_payload_timeout = 4,
     esb_payload_ping = 5,
     esb_payload_ping_response = 6,
-    esb_payload_bridge_command = 7
+    esb_payload_bridge_command = 7,
+    esb_payload_vts_command = 8,
+    esb_payload_stimulus = 9,
 } esb_payload_type_e;
 
 typedef struct __attribute__ ((__packed__)) {
@@ -43,8 +45,7 @@ typedef enum {
     esb_state_unconnected,
     esb_state_unconnected_wait_tx_done,
     esb_state_connected,
-    esb_state_connected_wait_tx_done,
-    esb_state_skip,
+    esb_state_connected_wait_tx_done
 } esb_state_e;
 
 typedef struct {

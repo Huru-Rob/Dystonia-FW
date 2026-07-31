@@ -1,5 +1,13 @@
 # Release Notes
 
+## 4.0
+- Addressing changed to use fixed addresses and switching pipes to switch from CLIC->Bridge to CLIC->VTS
+    - Many changes to the esb state machine implementing simplifications because of the improved addressing
+- Trigger phase stored in nv_params when changed by Neurobuzz
+    - allows monitor front end to be informed of Neurobuzz-initiated phase changes
+- Decimation factor changed from 4:1 to 2:1 
+- SPI, Flash and Storage removed from initialisation
+
 ## 2.2
 - New Device ID in UICR supported
 - Rev E board support added.

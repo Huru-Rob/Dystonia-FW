@@ -11,6 +11,7 @@
 #include "hal.h"
 #include "oscilltrack.h"
 #include "neurobuzz.h"
+#include "crc8.h"
 
 NRF_LOG_MODULE_REGISTER();
 
@@ -291,7 +292,10 @@ void init_nv_params(void)
         nv_params.phases[i] = default_phases[i];
     } 
     nv_params.num_phases = 6;
-
+    for(uint8_t i = 0; i < sizeof(nv_params.unused); i++)
+    {
+        nv_params.unused[i] = 0;
+    }
 }
 
 int32_t save_info_to_local_flash(uint32_t reason)
@@ -305,6 +309,8 @@ int32_t save_info_to_local_flash(uint32_t reason)
     wait_for_flash_ready(&fstorage);
 
     nv_params.store_reason = reason;
+    nv_params.crc = 0;
+    nv_params.crc = crc8(0, (uint8_t *)&nv_params, sizeof(nv_params_t)-1);
 
     err = nrf_fstorage_write(&fstorage, 0xA0000, &nv_params, sizeof(nv_params), NULL);
     APP_ERROR_CHECK(err);
@@ -320,6 +326,16 @@ int32_t read_stored_data(void)
     wait_for_flash_ready(&fstorage);
 
     err = nrf_fstorage_read(&fstorage, 0xA0000, &nv_params, sizeof(nv_params));
+    uint8_t crc = crc8(0, (uint8_t *)&nv_params, sizeof(nv_params_t));
+    if(crc != 0)
+    {
+        NRF_LOG_WARNING("nv_params crc = %d", crc);
+        init_nv_params();
+
+        wait_for_flash_ready(&fstorage);
+        save_info_to_local_flash(store_reason_bad_crc);
+    }
+
     NRF_LOG_INFO("Device ID: %d", nv_params.device_id);
     NRF_LOG_INFO("Store Reason: %d", nv_params.store_reason);
     NRF_LOG_INFO("Frequency: %d", nv_params.frequency);
@@ -333,6 +349,7 @@ int32_t read_stored_data(void)
     {
         NRF_LOG_INFO("Blank non volatile parameters: Initialising")
         init_nv_params();
+        wait_for_flash_ready(&fstorage);
         save_info_to_local_flash(store_reason_blank_all);
     }
 

@@ -7,10 +7,22 @@
 #define NEUROBUZZ_SHORT_DUR_MS          (15000)
 #define NEUROBUZZ_SWITCH_STIM_GAP_MS    (1500)
 #define NEUROBUZZ_SWITCH_STIM_UPDATES   (NEUROBUZZ_SWITCH_STIM_GAP_MS/NEUROBUZZ_IDLE_UPDATE_PERIOD)
-#define LONG_PRESS_PULSE_PERIOD         (500)
-#define VERY_LONG_PRESS_PULSE_PERIOD    (50)
-#define DOUBLE_CLICK_PULSE_PERIOD_SLOW_TO_FAST      (70)
-#define DOUBLE_CLICK_PULSE_PERIOD_FAST_TO_SLOW      (140)
+
+#define LONG_PRESS_N_PULSES             (75)
+#define LONG_PRESS_N_BURSTS             (2)
+#define LONG_PRESS_BURST_GAP            (1000)
+#define LONG_PRESS_PULSE_PERIOD         (10)
+
+#define VERY_LONG_PRESS_N_PULSES        (200)
+#define VERY_LONG_PRESS_PULSE_PERIOD    (10)
+
+#define DOUBLE_CLICK_N_PULSES_SLOW_TO_FAST          (20)
+#define DOUBLE_CLICK_N_PULSES_SLOW_HOLD_TO_SLOW     (30)
+#define DOUBLE_CLICK_N_PULSES_FAST_TO_SLOW          (50)
+#define DOUBLE_CLICK_N_PULSES_FAST_HOLD_TO_FAST     (16)
+#define DOUBLE_CLICK_PULSE_PERIOD_SLOW_TO_FAST      (10)
+#define DOUBLE_CLICK_PULSE_PERIOD_FAST_TO_SLOW      (10)
+
 #define NEUROBUZZ_MAX_PHASES            (6)
 #define NEUROBUZZ_STEP_NEAR_PREFERRED_PHASE (20)
 
@@ -36,6 +48,7 @@ typedef struct {
     neurobuzz_state_e state;
     neurobuzz_state_e next_state;    /* data */
     uint8_t pulse_counter;
+    uint8_t burst_counter;
     uint16_t phase_switch_update_counter;
     switching_mode_e switching_mode;
     bool short_press;

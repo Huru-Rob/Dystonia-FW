@@ -232,51 +232,60 @@ void pt10_init(void)
         }
     }
 
-    // init spi
-    local_err = hal_spi_init();
-    if (local_err != 0)
-    {
-        NRF_LOG_WARNING("spi err");
-        init_err = 1;
-    }
-    else
-    {
-        NRF_LOG_INFO("spi ok");
-        pt10_status.post_result |= POST_SPI_PASS;
-    }
-    hal_wdt_feed();
-    PT10_LOG_FLUSH();     
+    // // init spi
+    // local_err = hal_spi_init();
+    // if (local_err != 0)
+    // {
+    //     NRF_LOG_WARNING("spi err");
+    //     init_err = 1;
+    // }
+    // else
+    // {
+    //     NRF_LOG_INFO("spi ok");
+    //     pt10_status.post_result |= POST_SPI_PASS;
+    // }
+    // hal_wdt_feed();
+    // PT10_LOG_FLUSH();     
 
-    // init flash
-    local_err = init_flash();
-    if (local_err != 0)
-    {
-        NRF_LOG_WARNING("flash err");
-        init_err = 1;
-    }
-    else
-    {
-        NRF_LOG_INFO("flash ok");
-        pt10_status.post_result |= POST_FLASH_PASS;
+    // // init flash
+    // local_err = init_flash();
+    // if (local_err != 0)
+    // {
+    //     NRF_LOG_WARNING("flash err");
+    //     init_err = 1;
+    // }
+    // else
+    // {
+    //     NRF_LOG_INFO("flash ok");
+    //     pt10_status.post_result |= POST_FLASH_PASS;
 
-        hal_wdt_feed();
-        PT10_LOG_FLUSH();
+    //     hal_wdt_feed();
+    //     PT10_LOG_FLUSH();
         
-        // init storage
-        local_err = storage_init(true);
-        if (local_err != 0)
-        {
-            NRF_LOG_WARNING("storage err");
-            init_err = 1;
-        }
-        else
-        {
-            NRF_LOG_INFO("storage ok");
-            pt10_status.post_result |= POST_STORAGE_PASS;
-        }
-    }
-    hal_wdt_feed();
-    PT10_LOG_FLUSH();
+    //     // init storage
+    //     local_err = storage_init(true);
+    //     if (local_err != 0)
+    //     {
+    //         NRF_LOG_WARNING("storage err");
+    //         init_err = 1;
+    //     }
+    //     else
+    //     {
+    //         NRF_LOG_INFO("storage ok");
+    //         pt10_status.post_result |= POST_STORAGE_PASS;
+    //     }
+    // }
+    // hal_wdt_feed();
+    // PT10_LOG_FLUSH();
+    hal_gpio_clear(PIN_SPI1_nCS);
+    nrf_gpio_cfg_output(PIN_SPI1_nCS);
+    hal_gpio_clear(PIN_SPI1_SDO);
+	nrf_gpio_cfg_output(PIN_SPI1_SDO);
+	hal_gpio_clear(PIN_SPI1_CLK);
+	nrf_gpio_cfg_output(PIN_SPI1_CLK);
+    hal_gpio_clear(PIN_SPI1_SDO);
+    nrf_gpio_cfg_output(PIN_SPI1_SDO);
+	nrf_gpio_cfg_input(PIN_SPI1_SDI, NRF_GPIO_PIN_PULLDOWN);
 
 
     local_err = acc_init();

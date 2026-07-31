@@ -2,7 +2,7 @@
 #define OSCILLTRACK_H_INCLUDED
 
 #define OSCILLTRACK_UPDATE_MS           (10)
-#define OSCILLTRACK_DECIMATION_FACTOR   (4)
+#define OSCILLTRACK_DECIMATION_FACTOR   (2)
 
 #define PI                      (3.1415927f)
 #define TWO_PI                  (2.0f * PI)
